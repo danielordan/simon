@@ -57,5 +57,6 @@
 
 ## פקודות הרצה
 > Claude ממלא זאת ברגע שהאפליקציה יכולה לרוץ (בדרך כלל בסיום Milestone 1), ומעדכן אם משהו משתנה.
-- **הרצה (dev):** `<command>`
-- **בדיקות (test):** `<command, או "אין">`
+- **הרצה (dev):** `npm run dev` (נפתח ב-http://localhost:5173)
+- **בדיקות (test):** `npm test` (בנוסף: `npm run typecheck`, `npm run build`)
+- Node.js 22 מותקן בתיקיית המשתמש (`~/.local/node`) ונוסף ל-PATH ב-`~/.zprofile`.

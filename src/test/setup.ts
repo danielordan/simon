@@ -4,6 +4,9 @@ import { afterEach } from 'vitest';
 
 afterEach(() => cleanup());
 
+// jsdom does not implement scrolling.
+window.scrollTo = () => {};
+
 /** Frequencies of every oscillator started by the app, in order. */
 export const playedFrequencies: number[] = [];
 

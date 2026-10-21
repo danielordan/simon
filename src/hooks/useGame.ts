@@ -33,7 +33,12 @@ export function useGame(rng: Rng = cryptoRng) {
     timer.current = null;
   };
 
+  // Playback and the success pause run only on the game screen and not while waiting for "tap to continue".
+  // Leaving cancels them via the effect cleanup; coming back re-runs them, so the sequence restarts from its first color.
+  const canRun = state.screen === 'home' && !state.awaitingResume;
+
   useEffect(() => {
+    if (!canRun) return;
     if (state.phase === 'showing') {
       // Generation guard: a late callback from a cancelled playback does nothing.
       let active = true;
@@ -58,7 +63,7 @@ export function useGame(rng: Rng = cryptoRng) {
       const timer = setTimeout(() => send({ type: 'SUCCESS_DONE', color: randomColor(rng) }), TIMINGS.successPause);
       return () => clearTimeout(timer);
     }
-  }, [state.phase, state.sequence, rng, send]);
+  }, [state.phase, state.sequence, canRun, rng, send]);
 
   useEffect(
     () => () => {
@@ -67,6 +72,48 @@ export function useGame(rng: Rng = cryptoRng) {
     },
     [],
   );
+
+  /** Ends any press light or error flash right away; a finished game then shows its result card directly. */
+  const finishPendingVisuals = useCallback(() => {
+    clearTimer(pressTimer);
+    clearTimer(endTimer);
+    setLitColor(null);
+    setErrorFlash(false);
+    stopAll();
+    const { phase } = stateRef.current;
+    if (phase === 'won' || phase === 'lost') setResultVisible(true);
+  }, []);
+
+  // Moving the app to the background pauses playback on the game screen (ARCHITECTURE.md 2.5).
+  useEffect(() => {
+    const onVisibilityChange = () => {
+      if (document.visibilityState !== 'hidden' || stateRef.current.screen !== 'home') return;
+      finishPendingVisuals();
+      send({ type: 'GO_BACKGROUND' });
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', onVisibilityChange);
+  }, [finishPendingVisuals, send]);
+
+  const openAbout = useCallback(() => {
+    if (stateRef.current.screen !== 'home') return;
+    finishPendingVisuals();
+    send({ type: 'OPEN_ABOUT' });
+  }, [finishPendingVisuals, send]);
+
+  /** "Back to game" is a user gesture, so audio is resumed here. */
+  const closeAbout = useCallback(() => {
+    if (stateRef.current.screen !== 'about') return;
+    ensureAudio();
+    send({ type: 'CLOSE_ABOUT', color: randomColor(rng) });
+  }, [rng, send]);
+
+  /** "Tap to continue" after returning from the background. */
+  const resume = useCallback(() => {
+    if (!stateRef.current.awaitingResume) return;
+    ensureAudio();
+    send({ type: 'RESUME', color: randomColor(rng) });
+  }, [rng, send]);
 
   /** "Start" and "New game": allowed before a game or once the result card is shown. */
   const start = useCallback(() => {
@@ -83,7 +130,7 @@ export function useGame(rng: Rng = cryptoRng) {
 
   const press = useCallback(
     (color: Color) => {
-      if (stateRef.current.phase !== 'input') return;
+      if (stateRef.current.phase !== 'input' || stateRef.current.screen !== 'home') return;
       ensureAudio();
       // A new press interrupts the light and tone of the previous one.
       clearTimer(pressTimer);
@@ -112,5 +159,5 @@ export function useGame(rng: Rng = cryptoRng) {
     [send],
   );
 
-  return { state, litColor, errorFlash, resultVisible, start, press };
+  return { state, litColor, errorFlash, resultVisible, start, press, openAbout, closeAbout, resume };
 }

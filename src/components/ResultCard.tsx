@@ -6,9 +6,10 @@ type Props = {
   stage: number;
   score: number;
   onNewGame: () => void;
+  onAbout: () => void;
 };
 
-export function ResultCard({ won, stage, score, onNewGame }: Props) {
+export function ResultCard({ won, stage, score, onNewGame, onAbout }: Props) {
   return (
     <section className={`result-card result-card--${won ? 'won' : 'lost'}`} aria-live="polite">
       <div className="result-card__icon">{won ? <TrophyIcon /> : <CloseCircleIcon />}</div>
@@ -41,8 +42,7 @@ export function ResultCard({ won, stage, score, onNewGame }: Props) {
           <RestartIcon />
           משחק חדש
         </button>
-        {/* No action until the About screen is built in Milestone 3. */}
-        <button type="button" className="button button--secondary">
+        <button type="button" className="button button--secondary" onClick={onAbout}>
           אודות
         </button>
       </div>

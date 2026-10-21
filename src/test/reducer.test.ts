@@ -106,3 +106,70 @@ describe('gameReducer', () => {
     expect(gameReducer(won, { type: 'START', color: 'red' })).toMatchObject({ score: 0, sessionBest: 10 });
   });
 });
+
+describe('navigation and pause', () => {
+  const success = gameReducer(input, { type: 'PRESS', color: 'yellow' });
+  const twoColorInput: GameState = { ...input, sequence: ['red', 'blue'], inputIndex: 1, score: 3, sessionBest: 5 };
+
+  it('OPEN_ABOUT / CLOSE_ABOUT keep the game while showing or during input', () => {
+    for (const state of [showing, twoColorInput]) {
+      const about = gameReducer(state, { type: 'OPEN_ABOUT' });
+      expect(about).toEqual({ ...state, screen: 'about' });
+      expect(gameReducer(about, { type: 'CLOSE_ABOUT', color: 'green' })).toEqual(state);
+    }
+  });
+
+  it('CLOSE_ABOUT during the success pause adds exactly one color', () => {
+    const about = gameReducer(success, { type: 'OPEN_ABOUT' });
+    expect(about.sequence).toEqual(['yellow']);
+    expect(gameReducer(about, { type: 'CLOSE_ABOUT', color: 'red' })).toMatchObject({
+      screen: 'home',
+      phase: 'showing',
+      sequence: ['yellow', 'red'],
+      inputIndex: 0,
+      score: 1,
+      sessionBest: 1,
+    });
+  });
+
+  it('CLOSE_ABOUT before a game or after it ends changes only the screen', () => {
+    const lost = gameReducer(input, { type: 'PRESS', color: 'red' });
+    for (const state of [initialState, lost]) {
+      const back = gameReducer(gameReducer(state, { type: 'OPEN_ABOUT' }), { type: 'CLOSE_ABOUT', color: 'blue' });
+      expect(back).toEqual(state);
+    }
+  });
+
+  it('presses are ignored while the About screen is open', () => {
+    const about = gameReducer(input, { type: 'OPEN_ABOUT' });
+    expect(gameReducer(about, { type: 'PRESS', color: 'yellow' })).toBe(about);
+  });
+
+  it('GO_BACKGROUND waits for "tap to continue" only while showing or in the success pause', () => {
+    expect(gameReducer(showing, { type: 'GO_BACKGROUND' }).awaitingResume).toBe(true);
+    expect(gameReducer(success, { type: 'GO_BACKGROUND' }).awaitingResume).toBe(true);
+    expect(gameReducer(input, { type: 'GO_BACKGROUND' })).toBe(input);
+    expect(gameReducer(initialState, { type: 'GO_BACKGROUND' })).toBe(initialState);
+    const about = gameReducer(showing, { type: 'OPEN_ABOUT' });
+    expect(gameReducer(about, { type: 'GO_BACKGROUND' })).toBe(about);
+  });
+
+  it('RESUME replays the same sequence while showing and adds one color after success', () => {
+    const waitingShow = gameReducer(showing, { type: 'GO_BACKGROUND' });
+    expect(gameReducer(waitingShow, { type: 'RESUME', color: 'red' })).toEqual(showing);
+
+    const waitingSuccess = gameReducer(success, { type: 'GO_BACKGROUND' });
+    expect(gameReducer(waitingSuccess, { type: 'RESUME', color: 'red' })).toMatchObject({
+      awaitingResume: false,
+      phase: 'showing',
+      sequence: ['yellow', 'red'],
+    });
+    expect(gameReducer(showing, { type: 'RESUME', color: 'red' })).toBe(showing);
+  });
+
+  it('closing About also clears a pending "tap to continue"', () => {
+    const waiting = gameReducer(showing, { type: 'GO_BACKGROUND' });
+    const back = gameReducer(gameReducer(waiting, { type: 'OPEN_ABOUT' }), { type: 'CLOSE_ABOUT', color: 'red' });
+    expect(back).toEqual(showing);
+  });
+});

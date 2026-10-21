@@ -1,3 +1,4 @@
+import { TOTAL_STAGES } from './constants';
 import { checkInput } from './rules';
 import type { Color, GameState } from './types';
 
@@ -5,7 +6,7 @@ export type GameAction =
   | { type: 'START'; color: Color }
   | { type: 'SHOW_DONE' }
   | { type: 'PRESS'; color: Color }
-  | { type: 'SUCCESS_DONE' };
+  | { type: 'SUCCESS_DONE'; color: Color };
 
 export const initialState: GameState = {
   sequence: [],
@@ -19,7 +20,8 @@ export const initialState: GameState = {
 export function gameReducer(state: GameState, action: GameAction): GameState {
   switch (action.type) {
     case 'START':
-      if (state.phase !== 'idle') return state;
+      // Used for both "Start" and "New game"; sessionBest is kept.
+      if (state.phase !== 'idle' && state.phase !== 'won' && state.phase !== 'lost') return state;
       return { ...state, sequence: [action.color], inputIndex: 0, score: 0, phase: 'showing' };
 
     case 'SHOW_DONE':
@@ -32,15 +34,16 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       if (result === 'correct') return { ...state, inputIndex: state.inputIndex + 1 };
       if (result === 'complete') {
         const score = state.score + 1;
-        return { ...state, score, sessionBest: Math.max(state.sessionBest, score), phase: 'success' };
+        const phase = state.sequence.length >= TOTAL_STAGES ? 'won' : 'success';
+        return { ...state, score, sessionBest: Math.max(state.sessionBest, score), phase };
       }
-      // Milestone 1: a wrong press simply returns to idle (error flow arrives in Milestone 2).
-      return { ...state, phase: 'idle' };
+      // Sequence and score are kept for the result card.
+      return { ...state, phase: 'lost' };
     }
 
     case 'SUCCESS_DONE':
       if (state.phase !== 'success') return state;
-      // Milestone 1: no next stage yet, return to idle.
-      return { ...state, phase: 'idle' };
+      // The only place a color is added to an existing sequence.
+      return { ...state, sequence: [...state.sequence, action.color], inputIndex: 0, phase: 'showing' };
   }
 }

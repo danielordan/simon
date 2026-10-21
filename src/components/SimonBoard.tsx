@@ -8,11 +8,12 @@ const BOARD_ORDER: readonly Color[] = ['green', 'red', 'yellow', 'blue'];
 
 type Props = {
   litColor: Color | null;
+  errorFlash: boolean;
   inputEnabled: boolean;
   onPress: (color: Color) => void;
 };
 
-export function SimonBoard({ litColor, inputEnabled, onPress }: Props) {
+export function SimonBoard({ litColor, errorFlash, inputEnabled, onPress }: Props) {
   // Only one touch at a time; extra fingers are ignored until it is lifted.
   const activePointer = useRef<number | null>(null);
 
@@ -39,7 +40,7 @@ export function SimonBoard({ litColor, inputEnabled, onPress }: Props) {
   };
 
   return (
-    <div className="board" dir="ltr">
+    <div className="board" dir="ltr" data-error={errorFlash}>
       {BOARD_ORDER.map((color) => (
         <button
           key={color}

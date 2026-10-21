@@ -30,3 +30,6 @@ export const COLOR_LABELS: Record<Color, string> = {
   yellow: 'צהוב',
   blue: 'כחול',
 };
+
+// Low, harsh buzz for a wrong press.
+export const ERROR_TONE = 110;

@@ -1,6 +1,7 @@
 import { COLORS } from '../game/constants';
 import { cryptoRng } from '../game/random';
-import { appendColor, checkInput, randomColor } from '../game/rules';
+import { initialState } from '../game/reducer';
+import { appendColor, checkInput, randomColor, reachedStage } from '../game/rules';
 import type { Color } from '../game/types';
 
 describe('randomColor', () => {
@@ -41,5 +42,16 @@ describe('checkInput', () => {
 
   it('detects a wrong press', () => {
     expect(checkInput(sequence, 0, 'red')).toBe('wrong');
+  });
+});
+
+describe('reachedStage', () => {
+  it('is the failed stage (score + 1) on a loss', () => {
+    expect(reachedStage({ ...initialState, phase: 'lost', score: 3 })).toBe(4);
+    expect(reachedStage({ ...initialState, phase: 'lost', score: 0 })).toBe(1);
+  });
+
+  it('is 10 on a win', () => {
+    expect(reachedStage({ ...initialState, phase: 'won', score: 10 })).toBe(10);
   });
 });

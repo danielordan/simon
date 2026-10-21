@@ -1,4 +1,4 @@
-import { TONES } from '../game/constants';
+import { ERROR_TONE, TONES } from '../game/constants';
 import type { Color } from '../game/types';
 
 const ENVELOPE = 0.01; // seconds, avoids clicks at start/end
@@ -36,6 +36,14 @@ export function stopAll(): void {
 }
 
 export function playTone(color: Color, ms: number): void {
+  play(TONES[color], 'triangle', ms);
+}
+
+export function playError(ms: number): void {
+  play(ERROR_TONE, 'sawtooth', ms);
+}
+
+function play(frequency: number, type: OscillatorType, ms: number): void {
   if (!ctx) return;
   stopAll();
   try {
@@ -43,8 +51,8 @@ export function playTone(color: Color, ms: number): void {
     const end = now + ms / 1000;
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
-    osc.type = 'triangle';
-    osc.frequency.value = TONES[color];
+    osc.type = type;
+    osc.frequency.value = frequency;
     gain.gain.setValueAtTime(0, now);
     gain.gain.linearRampToValueAtTime(VOLUME, now + ENVELOPE);
     gain.gain.setValueAtTime(VOLUME, end - ENVELOPE);
